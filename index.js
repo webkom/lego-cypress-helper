@@ -12,7 +12,11 @@ console.log(
 );
 
 const backup = () => {
-  const pg_commands = `select pg_terminate_backend(pg_stat_activity.pid) from pg_stat_activity where pg_stat_activity.datname='${pg_database}_copy'; drop database if exists ${pg_database}_copy; create database ${pg_database}_copy with template ${pg_database};`;
+  const pg_commands = `
+    select pg_terminate_backend(pid) from pg_stat_activity where datname='${pg_database}' or datname='${pg_database}_copy';
+    drop database if exists ${pg_database}_copy;
+    create database ${pg_database}_copy with template ${pg_database};
+  `.replace(/\n/g, ' ');
   const cmd = `echo "${pg_commands}" | psql -h ${pg_host} -U ${pg_username} postgres`;
   console.log(`Running: ${cmd}`);
   exec(cmd, (err, stdout, stderr) => {
@@ -21,7 +25,8 @@ const backup = () => {
       console.error(err.toString());
       return;
     }
-
+    console.log(stdout);
+    console.log(stderr);
     console.log('db copy was generated');
   });
 };
@@ -30,7 +35,11 @@ app.get('/', (req, res) => res.send('OK'));
 app.post('/', (req, res) => {
   console.log('post to lego-cypress-helper');
 
-  const pg_commands = `select pg_terminate_backend(pg_stat_activity.pid) from pg_stat_activity where pg_stat_activity.datname='${pg_database}'; drop database if exists ${pg_database}; create database ${pg_database} with template ${pg_database}_copy;`;
+  const pg_commands = `
+    select pg_terminate_backend(pid) from pg_stat_activity where datname='${pg_database}';
+    drop database if exists ${pg_database};
+    create database ${pg_database} with template ${pg_database}_copy;
+  `.replace(/\n/g, ' ');
   const cmd = `echo "${pg_commands}" | psql -h ${pg_host} -U ${pg_username} postgres`;
 
   console.log(`Running: ${cmd}`);
@@ -41,7 +50,8 @@ app.post('/', (req, res) => {
       res.status(500).send('ERROR');
       return;
     }
-
+    console.log(stdout);
+    console.log(stderr);
     console.log('Successfully restored');
     res.send('OK');
   });
